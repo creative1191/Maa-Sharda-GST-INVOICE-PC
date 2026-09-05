@@ -86,6 +86,10 @@ class GSTInvoiceApp(tk.Tk):
         return inner
 
     def log(self, msg):
+        if not hasattr(self, "txt"):          # console abhi bana nahi → queue karo
+            self._pending_logs = getattr(self, "_pending_logs", [])
+            self._pending_logs.append(msg)
+            return
         self.txt.configure(state="normal")
         self.txt.insert("end", msg + "\n")
         self.txt.see("end")
@@ -102,10 +106,12 @@ class GSTInvoiceApp(tk.Tk):
 
         # ---- Client (Billed To) — profile se auto ----
         c = self._card("🏢 BILLED TO (Fixed Client) — clients/default.json se auto")
-        self.e_cname = self._entry(c, "Firm Name", 0, 0)
-        self.e_caddr1 = self._entry(c, "Address Line 1", 0, 1)
-        self.e_caddr2 = self._entry(c, "Address Line 2", 1, 0)
-        self.e_cgstin = self._entry(c, "GSTIN", 1, 1)
+        cgrid = tk.Frame(c, bg=CARD_BG)   # grid-entries ka alag container (pack/grid mix na ho)
+        cgrid.pack(fill="x", pady=(4, 0))
+        self.e_cname = self._entry(cgrid, "Firm Name", 0, 0)
+        self.e_caddr1 = self._entry(cgrid, "Address Line 1", 0, 1)
+        self.e_caddr2 = self._entry(cgrid, "Address Line 2", 1, 0)
+        self.e_cgstin = self._entry(cgrid, "GSTIN", 1, 1)
         self.load_profile()
         tk.Button(c, text="💾 Client Save karo", command=self.save_profile,
                   bg=BTN_DARK, fg="#fff", activebackground="#334155",
@@ -171,6 +177,10 @@ class GSTInvoiceApp(tk.Tk):
                            font=("Consolas", 9), state="disabled", wrap="word",
                            padx=10, pady=8)
         self.txt.pack(fill="both", expand=True, padx=10, pady=(4, 10))
+        # console ready → pehle se queued messages flush karo
+        for msg in getattr(self, "_pending_logs", []):
+            self.log(msg)
+        self._pending_logs = []
 
     def _entry(self, parent, label, r, col):
         f = tk.Frame(parent, bg=CARD_BG)
