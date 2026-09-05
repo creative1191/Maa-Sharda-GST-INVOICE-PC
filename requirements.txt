@@ -1,0 +1,6 @@
+reportlab>=4.0
+pdfplumber>=0.10
+pypdf>=3.0
+Pillow>=10.0
+pytesseract>=0.3      # OCR (image labels) — tesseract binary bhi chahiye (UB-Mannheim build)
+streamlit>=1.30        # Web UI: streamlit run streamlit_app/app.py
