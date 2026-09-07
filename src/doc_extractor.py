@@ -60,6 +60,10 @@ STOP_WORDS = (
 )
 
 PINCODE_RE = re.compile(r"\b([1-9][0-9]{5})\b")
+
+PAYMENT_LABEL = re.compile(
+    r"payment\s*(?:method|mode|type)?\s*[:\-]?\s*(pre\s*-?\s*paid|cod)",
+    re.IGNORECASE)
 PHONE_RE = re.compile(r"^\s*(?:ph(?:one)?|mob(?:ile)?|tel)?[\s:.-]*[0-9+\-]{10,}\s*$",
                       re.IGNORECASE)
 
@@ -76,6 +80,19 @@ def _clean_name(name: str) -> str:
 def _is_stop_line(line: str) -> bool:
     low = line.lower()
     return any(low.startswith(w) or w in low for w in STOP_WORDS)
+
+
+def _find_payment(text: str) -> str:
+    """Payment method detect: 'Prepaid' ya 'COD' (sirf method — amount kabhi nahi)."""
+    m = PAYMENT_LABEL.search(text)
+    if m:
+        val = m.group(1).lower().replace(" ", "").replace("-", "")
+        return "COD" if val == "cod" else "Prepaid"
+    if re.search(r"\bCOD\b", text):
+        return "COD"
+    if re.search(r"pre\s*-?\s*paid", text, re.IGNORECASE):
+        return "Prepaid"
+    return ""
 
 
 def _find_awb(text: str) -> str:
@@ -148,6 +165,7 @@ def parse_shipping_text(text: str) -> dict:
         "consignee_address1": addr1,
         "consignee_address2": addr2,
         "destination_pincode": pin,
+        "payment_type": _find_payment(flat),
     }
 
 
@@ -181,6 +199,7 @@ def _extract_pdf(path: str) -> tuple:
                 "destination_pincode": pm.group(1) if pm else "",
                 # Sales Number → Client Order ID (auto, reconciliation key)
                 "client_order_id": r.get("sales_number", ""),
+                "payment_type": r.get("payment_type", ""),
                 "_source": "delhivery-invoice-parser",
             }
     except Exception:
